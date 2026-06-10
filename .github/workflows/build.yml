@@ -43,9 +43,14 @@ jobs:
 
   deploy-dev:
     needs: build-and-push
-    runs-on: [self-hosted, prism-deploy]
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
     steps:
-      - name: Deploy prism-agent to VM 212
+      - name: Trigger deploy on prism monorepo
         run: |
-          ssh -o BatchMode=yes prism-dev 'set -euo pipefail; cd /opt/prism; docker compose -f docker-compose.dev.yml pull prism-agent; docker compose -f docker-compose.dev.yml up -d prism-agent; docker compose -f docker-compose.dev.yml ps prism-agent'
+          echo '{"event_type":"deploy-dev-service","client_payload":{"service":"prism-agent"}}' \
+            | gh api repos/REBUS-Industries/prism/dispatches --method POST --input -
+        env:
+          GH_TOKEN: ${{ secrets.PRISM_DISPATCH_TOKEN }}
